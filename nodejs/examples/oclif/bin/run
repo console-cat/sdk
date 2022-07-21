@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+
+// Collect CLI telemetry via Console Cat
+const { ConsoleCat } = require('@console-cat/sdk');
+ConsoleCat.initialize({
+  cliId: 'testing-123',
+  debug: true,
+  packageJson: require('../package.json'),
+});
+
+const oclif = require('@oclif/core');
+
+oclif
+  .run()
+  .then(require('@oclif/core/flush'))
+  .catch(require('@oclif/core/handle'));

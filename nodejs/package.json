@@ -1,0 +1,78 @@
+{
+  "version": "0.16.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "scripts": {
+    "start": "tsdx watch",
+    "build": "tsdx build",
+    "test": "tsdx test",
+    "lint": "tsdx lint",
+    "prepare": "tsdx build",
+    "size": "size-limit",
+    "analyze": "size-limit --why"
+  },
+  "peerDependencies": {},
+  "husky": {
+    "hooks": {
+      "pre-commit": "tsdx lint"
+    }
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "name": "@console-cat/sdk",
+  "author": "Matt Evenson",
+  "module": "dist/node-sdk.esm.js",
+  "size-limit": [
+    {
+      "path": "dist/node-sdk.cjs.production.min.js",
+      "limit": "10 KB"
+    },
+    {
+      "path": "dist/node-sdk.esm.js",
+      "limit": "10 KB"
+    }
+  ],
+  "devDependencies": {
+    "@size-limit/preset-small-lib": "^7.0.8",
+    "@types/url-join": "^4.0.1",
+    "husky": "^8.0.1",
+    "size-limit": "^7.0.8",
+    "tsdx": "^0.14.1",
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.24.10",
+    "@types/async-exit-hook": "^2.0.0",
+    "@types/node-fetch": "^2.6.2",
+    "async-exit-hook": "^2.0.1",
+    "node-fetch": "2",
+    "node-machine-id": "^1.1.12",
+    "url-join": "^5.0.0"
+  },
+  "description": "Congrats! You just saved yourself hours of work by bootstrapping this project with TSDX. Let’s get you oriented with what’s here and how to use it.",
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/console-cat/console-cat-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/console-cat/console-cat-sdk/issues"
+  },
+  "homepage": "https://github.com/console-cat/console-cat-sdk#readme"
+}
