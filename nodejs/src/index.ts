@@ -37,8 +37,6 @@ export class ConsoleCat {
       return;
     }
 
-    this.export(options);
-
     const cliId = options.cliId;
 
     if (!cliId) {
@@ -82,44 +80,33 @@ export class ConsoleCat {
           {}
         );
 
+        const apiUrl = options.apiUrl ?? DEFAULT_API_URL;
+
         // Send telemetry to Console Cat
-        this.export(options).then(done);
+        fetch(apiUrl + '/events', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            events: fs
+              .readFileSync(eventsFilePath, 'utf-8')
+              .split('\n')
+              .filter(event => event !== '')
+              .map(event => JSON.parse(event)),
+          }),
+        }).then(response => {
+          // Clear the JSONL file if correct
+          if (response.ok) {
+            fs.unlinkSync(eventsFilePath);
+          } else if (options.debug) {
+            console.log(response.body);
+          }
+          done();
+        });
       } catch (e) {
         if (options.debug) console.log(e);
-      }
-    });
-  }
-
-  static export(options: ConsoleCatOptions) {
-    const apiUrl = options.apiUrl ?? DEFAULT_API_URL;
-
-    const tmpDir = path.join(os.tmpdir(), options.cliId);
-    const eventsFilePath = path.join(tmpDir, 'events.jsonl');
-
-    if (!fs.existsSync(eventsFilePath)) {
-      return Promise.resolve();
-    }
-
-    // Send telemetry to Console Cat
-    return fetch(apiUrl + '/events', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        events: fs
-          .readFileSync(eventsFilePath, 'utf-8')
-          .split('\n')
-          .filter(event => event !== '')
-          .map(event => JSON.parse(event)),
-      }),
-    }).then(response => {
-      // Clear the JSONL file if correct
-      if (response.ok) {
-        fs.unlinkSync(eventsFilePath);
-      } else if (options.debug) {
-        console.log(response.body);
       }
     });
   }

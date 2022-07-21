@@ -2,10 +2,11 @@
 
 // Collect CLI telemetry via Console Cat
 const { ConsoleCat } = require('@console-cat/sdk');
+
 ConsoleCat.initialize({
-  cliId: 'testing-123',
+  cliId: 'oclif-test-9a984b16-c712-4783-8fca-cc81e3e0f735',
+  version: '1.0.0', // Change this to match `version` in your CLI's `package.json`
   debug: true,
-  packageJson: require('../package.json'),
 });
 
 const oclif = require('@oclif/core');
