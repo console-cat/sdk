@@ -14,6 +14,8 @@ const oclif = require('@oclif/core');
 const path = require('path');
 const project = path.join(__dirname, '..', 'tsconfig.json');
 
+process.exit(3);
+
 // throw new Error('wtf jerry');
 
 // In dev mode -> use ts-node and dev plugins
