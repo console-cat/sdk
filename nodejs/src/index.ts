@@ -2,8 +2,8 @@ import exitHook from 'async-exit-hook';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'node:fs';
-import fetch from 'node-fetch';
 import { machineIdSync } from 'node-machine-id';
+import * as child_process from 'node:child_process';
 
 export interface CommandExecutionEvent {
   eventType: string;
@@ -30,6 +30,20 @@ export interface ConsoleCatOptions {
 
 const DEFAULT_API_URL = 'https://api.consolecat.dev';
 
+const fetchScript = (
+  url: string,
+  events: object[]
+) => `const fetch = require('node-fetch');
+fetch('${url}', {
+  method: 'POST',
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  },
+  body: '{ \\"events\\": ${JSON.stringify(events).replaceAll(`"`, `\\"`)} }',
+}).then(response => console.log(response.ok));
+`;
+
 export class ConsoleCat {
   static eventsFilePath(options: ConsoleCatOptions) {
     const tmpDir = path.join(os.tmpdir(), options.cliId);
@@ -55,28 +69,21 @@ export class ConsoleCat {
         .filter(event => event !== '')
         .map(event => JSON.parse(event));
 
+      const url = apiUrl + '/events';
+
       // Send telemetry to Console Cat
-      fetch(apiUrl + '/events', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          events,
-        }),
-      }).then(response => {
-        // Clear the JSONL file if correct
-        if (response.ok) {
-          fs.unlinkSync(eventsFilePath);
-          if (options.debug) {
-            console.log(`Successfully flushed ${events.length} events`);
-          }
-        } else if (options.debug) {
-          console.log(response.body);
+      const buffer = child_process
+        .execSync(`echo "${fetchScript(url, events)}" | node`)
+        .toString();
+
+      if (buffer.includes('true')) {
+        fs.unlinkSync(eventsFilePath);
+        if (options.debug) {
+          console.log(`Successfully flushed ${events.length} events`);
         }
-        done?.();
-      });
+      }
+
+      done?.();
     } catch (e) {
       if (options.debug) console.log(e);
       done?.();
@@ -92,9 +99,6 @@ export class ConsoleCat {
     if (!options.cliId) {
       throw new Error('Missing CLI ID for Console Cat!');
     }
-
-    // Check if events failed to flush
-    this.export(options);
 
     const startUnixTimestampMs = Date.now();
 
