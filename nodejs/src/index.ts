@@ -31,23 +31,76 @@ export interface ConsoleCatOptions {
 const DEFAULT_API_URL = 'https://api.consolecat.dev';
 
 export class ConsoleCat {
+  static eventsFilePath(options: ConsoleCatOptions) {
+    const tmpDir = path.join(os.tmpdir(), options.cliId);
+    return path.join(tmpDir, 'events.jsonl');
+  }
+
+  static export(options: ConsoleCatOptions, done?: () => void) {
+    try {
+      const tmpDir = path.join(os.tmpdir(), options.cliId);
+      const eventsFilePath = path.join(tmpDir, 'events.jsonl');
+
+      if (!fs.existsSync(eventsFilePath)) {
+        if (options.debug) {
+        }
+        return;
+      }
+
+      const apiUrl = options.apiUrl ?? DEFAULT_API_URL;
+
+      const events = fs
+        .readFileSync(eventsFilePath, 'utf-8')
+        .split('\n')
+        .filter(event => event !== '')
+        .map(event => JSON.parse(event));
+
+      // Send telemetry to Console Cat
+      fetch(apiUrl + '/events', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          events,
+        }),
+      }).then(response => {
+        // Clear the JSONL file if correct
+        if (response.ok) {
+          fs.unlinkSync(eventsFilePath);
+          if (options.debug) {
+            console.log(`Successfully flushed ${events.length} events`);
+          }
+        } else if (options.debug) {
+          console.log(response.body);
+        }
+        done?.();
+      });
+    } catch (e) {
+      if (options.debug) console.log(e);
+      done?.();
+    }
+  }
+
   static initialize(options: ConsoleCatOptions) {
     if (process.env.DO_NOT_TRACK && process.env.DO_NOT_TRACK !== '0') {
       // Follow Console Do Not Track (DNT)
       return;
     }
 
-    const cliId = options.cliId;
-
-    if (!cliId) {
+    if (!options.cliId) {
       throw new Error('Missing CLI ID for Console Cat!');
     }
+
+    // Check if events failed to flush
+    this.export(options);
 
     const startUnixTimestampMs = Date.now();
 
     const executionEventStart = {
       eventType: 'command_execution',
-      cliId,
+      cliId: options.cliId,
       machineId: machineIdSync(),
       version: options.version,
     };
@@ -62,7 +115,7 @@ export class ConsoleCat {
           exitCode: process.exitCode ?? 0,
         };
 
-        const tmpDir = path.join(os.tmpdir(), cliId);
+        const tmpDir = path.join(os.tmpdir(), options.cliId);
         const eventsFilePath = path.join(tmpDir, 'events.jsonl');
 
         if (options.debug) {
@@ -74,39 +127,18 @@ export class ConsoleCat {
           fs.mkdirSync(tmpDir);
         }
 
+        // Add latest event to buffer
         fs.appendFileSync(
           eventsFilePath,
           JSON.stringify(executionEvent) + '\n',
           {}
         );
 
-        const apiUrl = options.apiUrl ?? DEFAULT_API_URL;
-
         // Send telemetry to Console Cat
-        fetch(apiUrl + '/events', {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            events: fs
-              .readFileSync(eventsFilePath, 'utf-8')
-              .split('\n')
-              .filter(event => event !== '')
-              .map(event => JSON.parse(event)),
-          }),
-        }).then(response => {
-          // Clear the JSONL file if correct
-          if (response.ok) {
-            fs.unlinkSync(eventsFilePath);
-          } else if (options.debug) {
-            console.log(response.body);
-          }
-          done();
-        });
+        this.export(options, done);
       } catch (e) {
         if (options.debug) console.log(e);
+        done?.();
       }
     });
   }
